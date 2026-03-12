@@ -8,6 +8,7 @@
             [buddy.sign.jwt :as jwt]
             [environ.core :as environ]
             [orcpub.dnd.e5.character :as char5e]
+            [orcpub.errors :as errors]
             [orcpub.entity.strict :as se]
             [orcpub.vtt :as vtt]
             [orcpub.vtt.broker :as broker]
@@ -25,6 +26,10 @@
 
 (defn- now []
   (Date/from (Instant/now)))
+
+(defn- tempid
+  [prefix]
+  (str prefix "-" (UUID/randomUUID)))
 
 (defn- query-token [request]
   (get (codec/form-decode (or (:query-string request) "")) "token"))
@@ -295,39 +300,49 @@
   [{:keys [conn identity]
     params :transit-params}]
   (let [username (:user identity)
-        room-id (d/tempid :db.part/user)
-        scene-id (d/tempid :db.part/user)
-        combat-id (d/tempid :db.part/user)
+        room-id (tempid "vtt-room")
+        scene-id (tempid "vtt-scene")
+        combat-id (tempid "vtt-combat")
         room-name (let [candidate (some-> (::vtt/name params) str s/trim)]
                     (if (s/blank? candidate)
                       "New VTT Room"
-                      candidate))
-        tx [{:db/id scene-id
-             ::vtt/name "Scene 1"
-             ::vtt/player-name "Scene 1"
-             ::vtt/grid-enabled? true
-             ::vtt/grid-size vtt/default-grid-size
-             ::vtt/grid-scale "5 ft"
-             ::vtt/width vtt/default-scene-width
-             ::vtt/height vtt/default-scene-height
-             ::vtt/fog-enabled? false}
-            {:db/id combat-id
-             ::vtt/round 1
-             ::vtt/notes ""}
-            {:db/id room-id
-             ::vtt/name room-name
-             ::vtt/owner username
-             ::vtt/created (now)
-             ::vtt/active-scene scene-id
-             ::vtt/combat-state combat-id
-             ::vtt/memberships [{::vtt/username username
-                                 ::vtt/role vtt/gm-role
-                                 ::vtt/connected-state :offline}]
-             ::vtt/scenes [scene-id]
-             ::vtt/chat-messages []}]
-        result @(d/transact conn tx)
-        created-room-id (d/resolve-tempid (d/db conn) (:tempids result) room-id)]
-    (ok {:room (room-snapshot (d/db conn) created-room-id username)})))
+                      candidate))]
+    (try
+      (let [tx [{:db/id scene-id
+                 ::vtt/name "Scene 1"
+                 ::vtt/player-name "Scene 1"
+                 ::vtt/grid-enabled? true
+                 ::vtt/grid-size vtt/default-grid-size
+                 ::vtt/grid-scale "5 ft"
+                 ::vtt/width vtt/default-scene-width
+                 ::vtt/height vtt/default-scene-height
+                 ::vtt/fog-enabled? false}
+                {:db/id combat-id
+                 ::vtt/round 1
+                 ::vtt/notes ""}
+                {:db/id room-id
+                 ::vtt/name room-name
+                 ::vtt/owner username
+                 ::vtt/created (now)
+                 ::vtt/active-scene scene-id
+                 ::vtt/combat-state combat-id
+                 ::vtt/memberships [{::vtt/username username
+                                     ::vtt/role vtt/gm-role
+                                     ::vtt/connected-state :offline}]
+                 ::vtt/scenes [scene-id]
+                 ::vtt/chat-messages []}]
+            result @(d/transact conn tx)
+            created-room-id (d/resolve-tempid (d/db conn) (:tempids result) room-id)]
+        (ok {:room (room-snapshot (d/db conn) created-room-id username)}))
+      (catch Exception e
+        (errors/log-error
+         "ERROR:"
+         (str "Failed to create VTT room: " (.getMessage e))
+         {:username username
+          :room-name room-name})
+        {:status 500
+         :body {:error :vtt-room-creation-failed
+                :message "Unable to create the VTT room. Please try again or contact support."}}))))
 
 (defn get-room
   [{:keys [db identity] {:keys [id]} :path-params}]
@@ -358,7 +373,7 @@
         kind (or (::vtt/kind params) :map)]
     (if (s/blank? url)
       (bad-request "Asset URL is required")
-      (let [asset-id (d/tempid :db.part/user)
+      (let [asset-id (tempid "vtt-asset")
             tx [{:db/id asset-id
                  ::vtt/owner username
                  ::vtt/kind kind
@@ -389,7 +404,7 @@
       (let [filename (or (:filename upload) "upload.bin")
             filename (or filename (:filename transit-upload) "upload.bin")
             mime (or (:content-type upload) (:mime transit-upload) "application/octet-stream")
-            asset-id (d/tempid :db.part/user)
+            asset-id (tempid "vtt-asset")
             stored-name (str (UUID/randomUUID) (or (extname filename) ""))
             destination (io/file (upload-root) stored-name)
             write-result (if upload
@@ -504,7 +519,7 @@
 (defmethod execute-command :create-scene
   [db conn room-id username command]
   (or (ensure-gm db room-id username)
-      (let [scene-id (d/tempid :db.part/user)
+      (let [scene-id (tempid "vtt-scene")
             name (let [candidate (some-> (::vtt/name command) str s/trim)]
                    (if (s/blank? candidate)
                      (scene-name db room-id)
@@ -555,7 +570,7 @@
   (or (ensure-gm db room-id username)
       (let [scene-id (::vtt/scene-id command)
             token (::vtt/token command)
-            token-id (d/tempid :db.part/user)
+            token-id (tempid "vtt-token")
             name (let [candidate (some-> (::vtt/name token) str s/trim)]
                    (if (s/blank? candidate) "Token" candidate))
             cleaned-token (merge

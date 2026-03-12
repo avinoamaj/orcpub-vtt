@@ -81,6 +81,17 @@
         (is (= "gm-user" (::vtt/username membership)))
         (is (= vtt/gm-role (::vtt/role membership)))))))
 
+(deftest create-room-returns-structured-error-when-creation-fails
+  (let [response (with-redefs [d/transact (fn [& _]
+                                            (throw (ex-info "boom" {:error :transact-failed})))]
+                   (vtt-routes/create-room {:conn ::fake-conn
+                                            :identity {:user "gm-user"}
+                                            :transit-params {::vtt/name "Arena"}}))]
+    (is (= 500 (:status response)))
+    (is (= :vtt-room-creation-failed (get-in response [:body :error])))
+    (is (= "Unable to create the VTT room. Please try again or contact support."
+           (get-in response [:body :message])))))
+
 (deftest gm-can-add-members-but-players-cannot
   (with-conn conn
     (let [mocked-conn (dm/fork-conn conn)]
