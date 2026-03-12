@@ -22,11 +22,6 @@
 
 (enable-console-print!)
 
-(when (and js/window.location
-           (not (or (s/starts-with? js/window.location.href "https")
-                    (s/starts-with? js/window.location.href "http://localhost"))))
-  (set! js/window.location.protocol "https"))
-
 (dispatch-sync [:initialize-db])
 
 ;; Init template cache after all subscription handlers are registered.
