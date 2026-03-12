@@ -59,7 +59,6 @@ FROM clojure:temurin-21-lein-alpine AS app-builder
 RUN apk add --no-cache bash maven
 
 # Vendor jars (pdfbox snapshots) → Maven local repo
-ADD ./lib/org/apache/pdfbox/ /root/.m2/repository/org/apache/pdfbox/
 
 # Install Datomic Pro peer jar from the shared download
 COPY --from=datomic-dist /datomic /tmp/datomic-pro

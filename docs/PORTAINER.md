@@ -14,9 +14,6 @@ production compose:
 - uses named Docker volumes for Datomic persistence
 - does not require the nginx sidecar or local certificate files
 
-Important: the Git repository must include the vendored PDFBox snapshot files
-under `lib/org/apache/pdfbox/`, because the Docker build copies that subtree
-into the image at build time.
 
 ## Recommended Portainer stack settings
 
