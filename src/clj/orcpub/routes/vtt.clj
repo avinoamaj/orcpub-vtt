@@ -207,47 +207,39 @@
 (defn room-snapshot
   [db room-id username]
   (let [connected-users (broker/room-members room-id)
-        room (d/pull db room-pull room-id)
-        active-scene-id (get-in room [::vtt/active-scene :db/id])]
-    (-> room
-        (assoc ::vtt/active-scene-id active-scene-id)
-        (assoc ::vtt/viewer-role (room-role db room-id username))
-        (update
-         ::vtt/memberships
-         (fn [memberships]
-           (->> memberships
-                (map (fn [membership]
-                       (assoc membership
-                              ::vtt/connected-state
-                              (if (connected-users (::vtt/username membership))
-                                :connected
-                                :offline))))
-                (sort-by (fn [membership]
-                           [(get vtt/role-order (::vtt/role membership) 99)
-                            (::vtt/username membership)]))
-                vec)))
-        (update
-         ::vtt/scenes
-         (fn [scenes]
-           (->> scenes
-                (sort-by sort-scene)
-                (mapv (fn [scene]
-                        (update
-                         scene
-                         ::vtt/tokens
-                         (fn [tokens]
-                           (->> tokens
-                                (sort-by sort-token)
-                                (mapv (fn [token]
-                                        (assoc token
-                                               ::vtt/name
-                                               (token-display-name db token)))))))))))
-        (update
-         ::vtt/chat-messages
-         (fn [messages]
-           (->> messages
-                (sort-by sort-message)
-                vec)))))))
+        room (or (d/pull db room-pull room-id) {})
+        active-scene-id (get-in room [::vtt/active-scene :db/id])
+        memberships (->> (or (::vtt/memberships room) [])
+                         (map (fn [membership]
+                                (assoc membership
+                                       ::vtt/connected-state
+                                       (if (connected-users (::vtt/username membership))
+                                         :connected
+                                         :offline))))
+                         (sort-by (fn [membership]
+                                    [(get vtt/role-order (::vtt/role membership) 99)
+                                     (::vtt/username membership)]))
+                         vec)
+        scenes (->> (or (::vtt/scenes room) [])
+                    (sort-by sort-scene)
+                    (mapv (fn [scene]
+                            (assoc scene
+                                   ::vtt/tokens
+                                   (->> (or (::vtt/tokens scene) [])
+                                        (sort-by sort-token)
+                                        (mapv (fn [token]
+                                                (assoc token
+                                                       ::vtt/name
+                                                       (token-display-name db token)))))))))
+        messages (->> (or (::vtt/chat-messages room) [])
+                      (sort-by sort-message)
+                      vec)]
+    (assoc room
+           ::vtt/active-scene-id active-scene-id
+           ::vtt/viewer-role (room-role db room-id username)
+           ::vtt/memberships memberships
+           ::vtt/scenes scenes
+           ::vtt/chat-messages messages)))
 
 (defn- ok
   [body]
