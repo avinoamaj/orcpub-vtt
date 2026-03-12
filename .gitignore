@@ -10,9 +10,10 @@ pom.xml
 *jar
 /lib/
 # Vendored snapshot allowed: pdfbox is required locally (vendor snapshot not available upstream)
+!/lib/org/
+!/lib/org/apache/
 !lib/org/apache/pdfbox/
-!lib/org/apache/pdfbox/pdfbox/2.1.0-SNAPSHOT/
-!lib/org/apache/pdfbox/pdfbox/2.1.0-SNAPSHOT/*
+!lib/org/apache/pdfbox/**
 /classes/
 /out/
 /target/
