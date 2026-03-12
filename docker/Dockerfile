@@ -86,7 +86,7 @@ ADD ./ /orcpub
 # Step 1: CLJS via figwheel-main (exits cleanly, no hang)
 # If compilation fails, print the full log so Git-based builders such as
 # Portainer expose the actual CLJS error instead of only "exit code 1".
-RUN bash -lc 'lein run -m figwheel.main -- --build-once prod 2>&1 | tee /tmp/cljs-build.log; status=${PIPESTATUS[0]}; if [ "$status" -ne 0 ] || [ ! -f resources/public/js/compiled/orcpub.js ]; then echo "CLJS build failed. Full log:"; cat /tmp/cljs-build.log; exit 1; fi'
+RUN bash -lc 'lein run -m figwheel.main -- --build-once dev 2>&1 | tee /tmp/cljs-build.log; status=${PIPESTATUS[0]}; if [ "$status" -ne 0 ] || [ ! -f resources/public/js/compiled/orcpub.js ]; then echo "CLJS build failed. Full log:"; cat /tmp/cljs-build.log; exit 1; fi'
 
 # Step 2: AOT compile (compilation finishes, subprocess hangs, timeout kills)
 RUN timeout 300 lein with-profile uberjar,uberjar-package compile || true; \
