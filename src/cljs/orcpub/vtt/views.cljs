@@ -140,7 +140,8 @@
 (defn vtt-room-list-page []
   (r/with-let [_ (dispatch [::events/load-rooms])]
     (let [rooms @(subscribe [::subs/room-list])
-          room-name @(subscribe [::subs/create-room-name])]
+          room-name @(subscribe [::subs/create-room-name])
+          username @(subscribe [:username])]
       [shared-views/content-page
        "VTT Rooms"
        [{:title "Refresh"
@@ -173,7 +174,7 @@
                 [:button.form-button.m-r-10
                  {:on-click #(dispatch [:route (route-match routes/vtt-room-page-route :id id)])}
                  "Open"]
-                (when (= (::vtt/viewer-role room) vtt/gm-role)
+                (when (= username (::vtt/owner room))
                   [:button.form-button
                    {:on-click #(when (js/confirm (str "Delete room \"" (::vtt/name room) "\"?"))
                                  (dispatch [::events/delete-room id]))}
