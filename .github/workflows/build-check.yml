@@ -1,0 +1,13 @@
+name: Docker Build Check
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build app image
+        run: docker build --target app -f docker/Dockerfile .
