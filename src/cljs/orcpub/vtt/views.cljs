@@ -147,6 +147,8 @@
          :icon "redo"
          :on-click #(dispatch [::events/load-rooms])}]
        [:div.p-20.main-text-color
+        [:div.bg-lighter.p-10.b-rad-5.m-b-20.f-s-14
+         "VTT UI build marker: delete-room-ui-v1"]
         [:div.bg-lighter.p-20.b-rad-5.m-b-20
          [:div.f-s-24.f-w-b.m-b-10 "Create Room"]
          [:div.flex.flex-wrap.align-items-end
