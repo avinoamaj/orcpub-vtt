@@ -140,8 +140,7 @@
 (defn vtt-room-list-page []
   (r/with-let [_ (dispatch [::events/load-rooms])]
     (let [rooms @(subscribe [::subs/room-list])
-          room-name @(subscribe [::subs/create-room-name])
-          username @(subscribe [:username])]
+          room-name @(subscribe [::subs/create-room-name])]
       [shared-views/content-page
        "VTT Rooms"
        [{:title "Refresh"
@@ -171,14 +170,13 @@
                 [:div.f-s-14.opacity-7 (str "Role: " (name (::vtt/viewer-role room)))]
                 [:div.f-s-14.opacity-7 (str "Owner: " (::vtt/owner room))]]
                [:div.flex
-                [:button.form-button.m-r-10
-                 {:on-click #(dispatch [:route (route-match routes/vtt-room-page-route :id id)])}
-                 "Open"]
-                (when (= username (::vtt/owner room))
-                  [:button.form-button
-                   {:on-click #(when (js/confirm (str "Delete room \"" (::vtt/name room) "\"?"))
-                                 (dispatch [::events/delete-room id]))}
-                   "Delete"])]])]
+               [:button.form-button.m-r-10
+                {:on-click #(dispatch [:route (route-match routes/vtt-room-page-route :id id)])}
+                "Open"]
+                [:button.form-button
+                 {:on-click #(when (js/confirm (str "Delete room \"" (::vtt/name room) "\"?"))
+                               (dispatch [::events/delete-room id]))}
+                 "Delete"]]])]
            [:div.bg-lighter.p-20.b-rad-5 "No VTT rooms yet."])]])))
 
 (defn- scene-sidebar [room active-scene can-gm?]
