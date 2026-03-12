@@ -169,9 +169,15 @@
                [:div.f-s-24.f-w-b (::vtt/name room)]
                [:div.f-s-14.opacity-7 (str "Role: " (name (::vtt/viewer-role room)))]
                [:div.f-s-14.opacity-7 (str "Owner: " (::vtt/owner room))]]
-              [:button.form-button
-               {:on-click #(dispatch [:route (route-match routes/vtt-room-page-route :id id)])}
-               "Open"]])]
+              [:div.flex
+               [:button.form-button.m-r-10
+                {:on-click #(dispatch [:route (route-match routes/vtt-room-page-route :id id)])}
+                "Open"]
+               (when (= (::vtt/viewer-role room) vtt/gm-role)
+                 [:button.form-button
+                  {:on-click #(when (js/confirm (str "Delete room \"" (::vtt/name room) "\"?"))
+                                (dispatch [::events/delete-room id]))}
+                  "Delete"])]]])]
           [:div.bg-lighter.p-20.b-rad-5 "No VTT rooms yet."])]])))
 
 (defn- scene-sidebar [room active-scene can-gm?]

@@ -199,6 +199,25 @@
       :dispatch [:route (room-page-route room-id)]})))
 
 (reg-event-fx
+ ::delete-room
+ (fn [{:keys [db]} [_ room-id]]
+   {:dispatch [:set-loading true]
+    :http {:method :delete
+           :headers (authorization-headers db)
+           :url (url-for-route routes/vtt-room-route :id room-id)
+           :on-success [::delete-room-success room-id]
+           :on-failure [::request-failure]}}))
+
+(reg-event-db
+ ::delete-room-success
+ (fn [db [_ room-id _response]]
+   (update-in db [:vtt :room-list]
+              (fn [rooms]
+                (->> (or rooms [])
+                     (remove #(= room-id (:db/id %)))
+                     vec)))))
+
+(reg-event-fx
  ::room-command
  (fn [{:keys [db]} [_ room-id command & [after-success]]]
    {:dispatch [:set-loading true]

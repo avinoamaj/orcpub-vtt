@@ -92,6 +92,32 @@
     (is (= "Unable to create the VTT room. Please try again or contact support."
            (get-in response [:body :message])))))
 
+(deftest room-owner-can-delete-room-but-other-members-cannot
+  (with-conn conn
+    (let [mocked-conn (dm/fork-conn conn)]
+      @(d/transact mocked-conn schema/all-schemas)
+      (seed-users! mocked-conn ["gm-user" "player-one"])
+      (let [room (create-room! mocked-conn "gm-user" "Arena")
+            room-id (:db/id room)]
+        (command! mocked-conn
+                  "gm-user"
+                  room-id
+                  {::vtt/command-type :add-member
+                   ::vtt/username "player-one"})
+        (let [player-delete (vtt-routes/delete-room {:db (d/db mocked-conn)
+                                                     :conn mocked-conn
+                                                     :identity {:user "player-one"}
+                                                     :path-params {:id room-id}})
+              owner-delete (vtt-routes/delete-room {:db (d/db mocked-conn)
+                                                    :conn mocked-conn
+                                                    :identity {:user "gm-user"}
+                                                    :path-params {:id room-id}})
+              rooms-after-delete (:body (vtt-routes/list-rooms {:db (d/db mocked-conn)
+                                                                :identity {:user "gm-user"}}))]
+          (is (= 403 (:status player-delete)))
+          (is (= 200 (:status owner-delete)))
+          (is (empty? rooms-after-delete)))))))
+
 (deftest gm-can-add-members-but-players-cannot
   (with-conn conn
     (let [mocked-conn (dm/fork-conn conn)]

@@ -1406,7 +1406,8 @@
         {:get `vtt/list-rooms
          :post `vtt/create-room}]
        [(route-map/path-for route-map/vtt-room-route :id ":id") ^:interceptors [check-auth parse-id]
-        {:get `vtt/get-room}]
+        {:get `vtt/get-room
+         :delete `vtt/delete-room}]
        [(route-map/path-for route-map/vtt-room-commands-route :id ":id") ^:interceptors [check-auth parse-id]
         {:post `vtt/command}]
        [(route-map/path-for route-map/vtt-room-stream-route :id ":id") ^:interceptors [parse-id]
@@ -1457,4 +1458,3 @@
        ["/health"
         {:get `health-check}]]]])
    expanded-index-routes))
-

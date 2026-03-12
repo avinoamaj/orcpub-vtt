@@ -56,3 +56,12 @@
                   :user-data {:token "test-token"}})
   (rf/dispatch-sync [::events/close-room])
   (is (= (vtt/default-client-state) (:vtt @app-db))))
+
+(deftest delete-room-success-removes-room-from-list
+  (reset! app-db {:vtt (assoc (vtt/default-client-state)
+                              :room-list [{:db/id 7 ::vtt/name "Arena"}
+                                          {:db/id 8 ::vtt/name "Dungeon"}])
+                  :user-data {:token "test-token"}})
+  (rf/dispatch-sync [::events/delete-room-success 7 {:status 200}])
+  (is (= [8]
+         (mapv :db/id (get-in @app-db [:vtt :room-list])))))

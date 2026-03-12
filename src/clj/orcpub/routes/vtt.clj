@@ -342,6 +342,27 @@
     (or (ensure-room-access db id username)
         (ok {:room (room-snapshot db id username)}))))
 
+(defn delete-room
+  [{:keys [db conn identity]
+    {:keys [id]} :path-params}]
+  (let [username (:user identity)]
+    (cond
+      (nil? username) (unauthorized "Unauthorized")
+      (not (room-owner? db id username)) (forbidden "Only the room owner can delete this room")
+      :else
+      (try
+        @(d/transact conn [[:db/retractEntity id]])
+        {:status 200}
+        (catch Exception e
+          (errors/log-error
+           "ERROR:"
+           (str "Failed to delete VTT room: " (.getMessage e))
+           {:username username
+            :room-id id})
+          {:status 500
+           :body {:error :vtt-room-deletion-failed
+                  :message "Unable to delete the VTT room. Please try again or contact support."}})))))
+
 (defn- asset-body
   [db asset-id]
   (d/pull db [:db/id
